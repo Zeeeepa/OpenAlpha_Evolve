@@ -1,0 +1,140 @@
+# Kubernetes deployment for OpenEvolve application
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openevolve-app
+  namespace: openevolve
+  labels:
+    app: openevolve-app
+    version: v1.0.0
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: openevolve-app
+  template:
+    metadata:
+      labels:
+        app: openevolve-app
+        version: v1.0.0
+    spec:
+      containers:
+      - name: openevolve-app
+        image: openevolve:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+        - containerPort: 8080
+          name: metrics
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: openevolve-secrets
+              key: database-url
+        - name: REDIS_URL
+          value: "redis://openevolve-redis:6379/0"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: LITELLM_DEFAULT_MODEL
+          valueFrom:
+            configMapKeyRef:
+              name: openevolve-config
+              key: default-model
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        volumeMounts:
+        - name: app-data
+          mountPath: /app/data
+        - name: app-logs
+          mountPath: /app/logs
+      volumes:
+      - name: app-data
+        persistentVolumeClaim:
+          claimName: openevolve-data-pvc
+      - name: app-logs
+        persistentVolumeClaim:
+          claimName: openevolve-logs-pvc
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openevolve-app-service
+  namespace: openevolve
+  labels:
+    app: openevolve-app
+spec:
+  selector:
+    app: openevolve-app
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+  - name: metrics
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: openevolve-ingress
+  namespace: openevolve
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+spec:
+  tls:
+  - hosts:
+    - openevolve.example.com
+    secretName: openevolve-tls
+  rules:
+  - host: openevolve.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: openevolve-app-service
+            port:
+              number: 8000
+

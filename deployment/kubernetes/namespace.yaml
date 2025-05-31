@@ -1,0 +1,9 @@
+# Kubernetes namespace for OpenEvolve deployment
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openevolve
+  labels:
+    name: openevolve
+    app: openevolve-autonomous-pipeline
+
