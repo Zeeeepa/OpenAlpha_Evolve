@@ -2,7 +2,7 @@
 
 ## Overview
 
-The OpenEvolve Database Connector System is a streamlined, production-ready database management solution designed specifically for autonomous development pipelines. It provides essential features including connection pooling, security, monitoring, and caching optimized for single-user autonomous operations.
+The OpenEvolve Database Connector System is a comprehensive, production-ready database management solution designed for autonomous development. It provides enterprise-grade features including connection pooling, security, monitoring, and caching optimized for single-user autonomous operations.
 
 ## Architecture
 
@@ -12,7 +12,7 @@ The OpenEvolve Database Connector System is a streamlined, production-ready data
 ├─────────────────────────────────────────────────────────────┤
 │  Query Builder  │  Migration Manager  │  Access Control    │
 ├─────────────────────────────────────────────────────────────┤
-│  Connection Pool Manager  │  Autonomous Task Manager        │
+│  Connection Pool Manager  │  Autonomous Task Integration    │
 ├─────────────────────────────────────────────────────────────┤
 │  PostgreSQL Connector  │  Redis Cache  │  Health Monitor   │
 ├─────────────────────────────────────────────────────────────┤
@@ -27,7 +27,7 @@ The OpenEvolve Database Connector System is a streamlined, production-ready data
 
 ### 1. Database Configuration (`config.py`)
 
-Environment-based configuration management optimized for autonomous operations:
+Environment-based configuration management with validation for autonomous development:
 
 ```python
 from openevolve.database.config import DatabaseConfig, load_database_config
@@ -35,12 +35,12 @@ from openevolve.database.config import DatabaseConfig, load_database_config
 # Load from environment variables
 config = load_database_config()
 
-# Or create manually
+# Or create manually for autonomous development
 config = DatabaseConfig(
     host="localhost",
     port=5432,
-    database="openevolve",
-    username="postgres",
+    database="openevolve_autonomous",
+    username="autonomous_user",
     password="password",
     min_pool_size=5,
     max_pool_size=20
@@ -55,7 +55,7 @@ config = DatabaseConfig(
 
 ### 2. PostgreSQL Connector (`connectors/postgresql.py`)
 
-High-performance async PostgreSQL connector with connection pooling:
+High-performance async PostgreSQL connector optimized for autonomous development:
 
 ```python
 from openevolve.database.connectors import PostgreSQLConnector
@@ -63,17 +63,19 @@ from openevolve.database.connectors import PostgreSQLConnector
 connector = PostgreSQLConnector(config)
 await connector.initialize()
 
-# Execute queries
+# Execute autonomous development queries
 result = await connector.execute_query(
-    "SELECT * FROM tasks WHERE status = $1",
+    "SELECT * FROM autonomous_tasks WHERE status = $1",
     {"status": "pending"},
     fetch_mode="all"
 )
 
-# Execute transactions
+# Execute autonomous transactions
 queries = [
-    ("INSERT INTO tasks (title) VALUES ($1)", {"title": "New Task"}, "none"),
-    ("UPDATE tasks SET status = $1 WHERE id = $2", {"status": "active", "id": 1}, "none")
+    ("INSERT INTO code_analysis (file_path, complexity) VALUES ($1, $2)", 
+     {"file_path": "main.py", "complexity": 5}, "none"),
+    ("UPDATE autonomous_tasks SET status = $1 WHERE id = $2", 
+     {"status": "completed", "id": 1}, "none")
 ]
 await connector.execute_transaction(queries)
 ```
@@ -87,7 +89,7 @@ await connector.execute_transaction(queries)
 
 ### 3. Connection Pool Manager (`connectors/pool_manager.py`)
 
-Advanced connection pool management with monitoring and optimization:
+Advanced connection pool management optimized for autonomous workloads:
 
 ```python
 from openevolve.database.connectors import ConnectionPoolManager
@@ -95,19 +97,19 @@ from openevolve.database.connectors import ConnectionPoolManager
 pool_manager = ConnectionPoolManager(config)
 await pool_manager.start()
 
-# Execute queries through pool
+# Execute autonomous queries through pool
 result = await pool_manager.execute_query(
-    "SELECT COUNT(*) FROM tasks",
+    "SELECT COUNT(*) FROM learning_patterns",
     fetch_mode="val"
 )
 
-# Get pool status
+# Get pool status for autonomous monitoring
 status = await pool_manager.get_pool_status()
 print(f"Active connections: {status['metrics']['active_connections']}")
 ```
 
 **Features:**
-- Automatic pool optimization
+- Automatic pool optimization for autonomous workloads
 - Real-time metrics collection
 - Connection recycling and load balancing
 - Health monitoring and alerting
@@ -421,7 +423,7 @@ print(f"Tasks completed today: {metrics.get_counter_value('autonomous.tasks.comp
 
 ```python
 # Environment variables
-DATABASE_URL=postgresql://postgres:password@localhost:5432/openevolve
+DATABASE_URL=postgresql://autonomous_user:password@localhost:5432/openevolve_autonomous
 DB_MIN_POOL_SIZE=5
 DB_MAX_POOL_SIZE=20
 DB_QUERY_TIMEOUT=30.0
@@ -573,4 +575,3 @@ pytest test_database_connector.py -v
 ## License
 
 This database connector system is part of the OpenEvolve project and follows the same licensing terms.
-
