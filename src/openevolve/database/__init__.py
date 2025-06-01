@@ -2,12 +2,10 @@
 OpenEvolve Database Connector System
 
 This module provides comprehensive database connectivity, connection pooling,
-multi-tenant support, and advanced database operations for the OpenEvolve
-autonomous development pipeline.
+and advanced database operations for the OpenEvolve autonomous development pipeline.
 
 Key Features:
 - PostgreSQL integration with connection pooling
-- Multi-tenant schema isolation
 - Async query execution
 - Migration system with versioning
 - Health monitoring and metrics
@@ -17,7 +15,6 @@ Key Features:
 
 from .connectors.postgresql import PostgreSQLConnector
 from .connectors.pool_manager import ConnectionPoolManager
-from .connectors.multi_tenant import MultiTenantManager
 from .migrations.manager import MigrationManager
 from .monitoring.health import HealthMonitor
 from .monitoring.metrics import MetricsCollector
@@ -40,7 +37,6 @@ __all__ = [
     # Core connectors
     "PostgreSQLConnector",
     "ConnectionPoolManager", 
-    "MultiTenantManager",
     
     # Migration system
     "MigrationManager",

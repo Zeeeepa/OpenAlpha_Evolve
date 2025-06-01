@@ -14,12 +14,13 @@ from pathlib import Path
 from ..config import DatabaseConfig
 from ..exceptions import DatabaseMigrationError
 from ..connectors.postgresql import PostgreSQLConnector
-from .migration import Migration, MigrationInfo, MigrationStatus
 from .migration import (
-    CreateTenantRegistryMigration,
-    CreateTaskManagementMigration,
-    CreateAnalyticsMigration,
-    CreateAuditLogMigration
+    Migration,
+    SQLMigration,
+    CreateTasksMigration,
+    CreateAnalyticsEventsMigration,
+    CreatePerformanceMetricsMigration,
+    CreateAuditLogsMigration
 )
 
 logger = logging.getLogger(__name__)
@@ -46,10 +47,10 @@ class MigrationManager:
     def _register_builtin_migrations(self) -> None:
         """Register built-in migrations."""
         builtin_migrations = [
-            CreateTenantRegistryMigration(),
-            CreateTaskManagementMigration(),
-            CreateAnalyticsMigration(),
-            CreateAuditLogMigration()
+            CreateTasksMigration(),
+            CreateAnalyticsEventsMigration(),
+            CreatePerformanceMetricsMigration(),
+            CreateAuditLogsMigration()
         ]
         
         for migration in builtin_migrations:
@@ -594,4 +595,3 @@ class MigrationManager:
                 })
         
         return validation_results
-

@@ -13,55 +13,46 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DatabaseConfig:
-    """Database connection configuration."""
+    """Database configuration settings."""
     
     # Connection settings
     host: str = "localhost"
     port: int = 5432
     database: str = "openevolve"
-    username: str = "openevolve_user"
+    username: str = "postgres"
     password: str = ""
+    
+    # SSL settings
+    ssl_mode: str = "prefer"
+    ssl_cert_path: Optional[str] = None
+    ssl_key_path: Optional[str] = None
+    ssl_ca_path: Optional[str] = None
     
     # Connection pool settings
     min_pool_size: int = 5
     max_pool_size: int = 20
     pool_timeout: float = 30.0
-    pool_recycle: int = 3600  # 1 hour
+    pool_recycle: int = 3600
+    pool_pre_ping: bool = True
     
     # Query settings
     query_timeout: float = 30.0
     statement_timeout: float = 60.0
     
-    # SSL settings
-    ssl_mode: str = "prefer"  # disable, allow, prefer, require, verify-ca, verify-full
-    ssl_cert_path: Optional[str] = None
-    ssl_key_path: Optional[str] = None
-    ssl_ca_path: Optional[str] = None
-    
-    # Multi-tenant settings
-    enable_multi_tenant: bool = True
-    default_schema: str = "public"
-    tenant_schema_prefix: str = "tenant_"
-    
     # Monitoring settings
     enable_monitoring: bool = True
-    metrics_collection_interval: int = 60  # seconds
-    health_check_interval: int = 30  # seconds
+    enable_metrics: bool = True
+    metrics_interval: int = 60
     
     # Security settings
     enable_audit_logging: bool = True
-    enable_query_logging: bool = False
-    max_query_log_length: int = 1000
+    audit_buffer_size: int = 1000
+    audit_flush_interval: int = 30
     
     # Cache settings
     enable_caching: bool = True
-    cache_ttl: int = 300  # 5 minutes
-    cache_max_size: int = 1000
-    
-    # Migration settings
-    migration_table: str = "schema_migrations"
-    migration_schema: str = "public"
-    
+    cache_default_ttl: int = 300
+
     def __post_init__(self):
         """Validate configuration after initialization."""
         self._validate_config()
@@ -125,7 +116,6 @@ class DatabaseConfig:
             "pool_timeout": self.pool_timeout,
             "query_timeout": self.query_timeout,
             "ssl_mode": self.ssl_mode,
-            "enable_multi_tenant": self.enable_multi_tenant,
             "enable_monitoring": self.enable_monitoring,
             "enable_audit_logging": self.enable_audit_logging,
             "enable_caching": self.enable_caching
@@ -180,7 +170,7 @@ def load_database_config() -> DatabaseConfig:
             host=parsed.hostname or "localhost",
             port=parsed.port or 5432,
             database=parsed.path.lstrip("/") if parsed.path else "openevolve",
-            username=parsed.username or "openevolve_user",
+            username=parsed.username or "postgres",
             password=parsed.password or ""
         )
     else:
@@ -188,7 +178,7 @@ def load_database_config() -> DatabaseConfig:
             host=os.getenv("DB_HOST", "localhost"),
             port=int(os.getenv("DB_PORT", "5432")),
             database=os.getenv("DB_NAME", "openevolve"),
-            username=os.getenv("DB_USER", "openevolve_user"),
+            username=os.getenv("DB_USER", "postgres"),
             password=os.getenv("DB_PASSWORD", "")
         )
     
@@ -203,7 +193,6 @@ def load_database_config() -> DatabaseConfig:
     config.ssl_key_path = os.getenv("DB_SSL_KEY_PATH")
     config.ssl_ca_path = os.getenv("DB_SSL_CA_PATH")
     
-    config.enable_multi_tenant = os.getenv("DB_ENABLE_MULTI_TENANT", "true").lower() == "true"
     config.enable_monitoring = os.getenv("DB_ENABLE_MONITORING", "true").lower() == "true"
     config.enable_audit_logging = os.getenv("DB_ENABLE_AUDIT_LOGGING", "true").lower() == "true"
     config.enable_caching = os.getenv("DB_ENABLE_CACHING", "true").lower() == "true"
@@ -245,4 +234,3 @@ def load_redis_config() -> RedisConfig:
     
     logger.info(f"Loaded Redis configuration for {config.host}:{config.port}")
     return config
-

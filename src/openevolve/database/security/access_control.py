@@ -1,351 +1,209 @@
 """
-Database access control and security management.
+Simplified access control for single-user autonomous development.
 """
 
 import logging
-from typing import Dict, List, Any, Optional, Set
-from dataclasses import dataclass
 from enum import Enum
-import hashlib
-import secrets
+from typing import Dict, Set, Any, Optional
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
 
 class Permission(Enum):
-    """Database permissions."""
+    """System permissions for autonomous operations."""
     READ = "read"
     WRITE = "write"
     DELETE = "delete"
+    EXECUTE = "execute"
     ADMIN = "admin"
-    SCHEMA_CREATE = "schema_create"
-    SCHEMA_DROP = "schema_drop"
 
 
 @dataclass
 class AccessRule:
-    """Access control rule."""
-    
-    user_id: str
-    resource_type: str  # table, schema, database
+    """Access rule for resources."""
+    resource_type: str
     resource_name: str
     permissions: Set[Permission]
-    conditions: Dict[str, Any] = None  # Additional conditions
-    
-    def __post_init__(self):
-        if self.conditions is None:
-            self.conditions = {}
+    conditions: Dict[str, Any]
 
 
 class AccessControlManager:
     """
-    Database access control manager with role-based permissions
-    and fine-grained access control.
+    Simplified access control manager for single-user autonomous development.
+    Provides basic resource protection and operation logging.
     """
     
     def __init__(self):
-        self._access_rules: Dict[str, List[AccessRule]] = {}
-        self._roles: Dict[str, Set[Permission]] = {}
-        self._user_roles: Dict[str, Set[str]] = {}
-        self._api_keys: Dict[str, str] = {}  # api_key -> user_id
-        
-        # Initialize default roles
-        self._initialize_default_roles()
-        
-        logger.info("Access control manager initialized")
-    
-    def _initialize_default_roles(self) -> None:
-        """Initialize default roles."""
-        self._roles = {
-            "admin": {Permission.READ, Permission.WRITE, Permission.DELETE, 
-                     Permission.ADMIN, Permission.SCHEMA_CREATE, Permission.SCHEMA_DROP},
-            "developer": {Permission.READ, Permission.WRITE, Permission.SCHEMA_CREATE},
-            "analyst": {Permission.READ},
-            "service": {Permission.READ, Permission.WRITE}
+        self._resource_rules: Dict[str, AccessRule] = {}
+        self._system_permissions: Set[Permission] = {
+            Permission.READ,
+            Permission.WRITE,
+            Permission.DELETE,
+            Permission.EXECUTE,
+            Permission.ADMIN
         }
+        
+        logger.info("Access control manager initialized for autonomous mode")
     
-    def create_role(self, role_name: str, permissions: Set[Permission]) -> None:
+    def add_resource_rule(self, rule: AccessRule) -> None:
         """
-        Create a new role.
-        
-        Args:
-            role_name: Name of the role
-            permissions: Set of permissions for the role
-        """
-        self._roles[role_name] = permissions
-        logger.info(f"Created role '{role_name}' with permissions: {[p.value for p in permissions]}")
-    
-    def assign_role(self, user_id: str, role_name: str) -> None:
-        """
-        Assign a role to a user.
-        
-        Args:
-            user_id: User identifier
-            role_name: Role to assign
-        """
-        if role_name not in self._roles:
-            raise ValueError(f"Role '{role_name}' does not exist")
-        
-        if user_id not in self._user_roles:
-            self._user_roles[user_id] = set()
-        
-        self._user_roles[user_id].add(role_name)
-        logger.info(f"Assigned role '{role_name}' to user '{user_id}'")
-    
-    def revoke_role(self, user_id: str, role_name: str) -> None:
-        """
-        Revoke a role from a user.
-        
-        Args:
-            user_id: User identifier
-            role_name: Role to revoke
-        """
-        if user_id in self._user_roles:
-            self._user_roles[user_id].discard(role_name)
-            logger.info(f"Revoked role '{role_name}' from user '{user_id}'")
-    
-    def add_access_rule(self, rule: AccessRule) -> None:
-        """
-        Add an access control rule.
+        Add a resource access rule.
         
         Args:
             rule: Access rule to add
         """
-        if rule.user_id not in self._access_rules:
-            self._access_rules[rule.user_id] = []
+        resource_key = f"{rule.resource_type}:{rule.resource_name}"
+        self._resource_rules[resource_key] = rule
         
-        self._access_rules[rule.user_id].append(rule)
-        logger.info(f"Added access rule for user '{rule.user_id}' on '{rule.resource_name}'")
+        logger.info(f"Added access rule for resource '{rule.resource_name}' of type '{rule.resource_type}'")
     
-    def remove_access_rule(self, user_id: str, resource_type: str, resource_name: str) -> None:
+    def remove_resource_rule(self, resource_type: str, resource_name: str) -> None:
         """
-        Remove an access control rule.
+        Remove a resource access rule.
         
         Args:
-            user_id: User identifier
             resource_type: Type of resource
             resource_name: Name of resource
         """
-        if user_id in self._access_rules:
-            self._access_rules[user_id] = [
-                rule for rule in self._access_rules[user_id]
-                if not (rule.resource_type == resource_type and rule.resource_name == resource_name)
-            ]
-            logger.info(f"Removed access rule for user '{user_id}' on '{resource_name}'")
+        resource_key = f"{resource_type}:{resource_name}"
+        if resource_key in self._resource_rules:
+            del self._resource_rules[resource_key]
+            logger.info(f"Removed access rule for resource '{resource_name}' of type '{resource_type}'")
     
     def check_permission(
         self,
-        user_id: str,
         permission: Permission,
         resource_type: str,
         resource_name: str,
         context: Optional[Dict[str, Any]] = None
     ) -> bool:
         """
-        Check if a user has permission for a resource.
+        Check if a permission is allowed for a resource.
+        In autonomous mode, this primarily serves as logging and validation.
         
         Args:
-            user_id: User identifier
             permission: Permission to check
             resource_type: Type of resource
             resource_name: Name of resource
-            context: Additional context for permission check
+            context: Optional context for the check
         
         Returns:
-            True if permission is granted
+            True if permission is granted (always True in autonomous mode)
         """
-        # Check role-based permissions
-        user_permissions = self._get_user_permissions(user_id)
-        if permission in user_permissions:
-            # Check for admin permission (grants all access)
-            if Permission.ADMIN in user_permissions:
-                return True
+        resource_key = f"{resource_type}:{resource_name}"
         
-        # Check specific access rules
-        if user_id in self._access_rules:
-            for rule in self._access_rules[user_id]:
-                if (rule.resource_type == resource_type and 
-                    rule.resource_name == resource_name and
-                    permission in rule.permissions):
-                    
-                    # Check additional conditions
-                    if self._check_rule_conditions(rule, context):
-                        return True
+        # Log the access attempt
+        logger.debug(f"Permission check: {permission.value} on {resource_type}/{resource_name}")
         
-        # Check wildcard rules
-        if user_id in self._access_rules:
-            for rule in self._access_rules[user_id]:
-                if (rule.resource_type == resource_type and 
-                    rule.resource_name == "*" and
-                    permission in rule.permissions):
-                    
-                    if self._check_rule_conditions(rule, context):
-                        return True
-        
-        logger.warning(f"Permission denied: user '{user_id}' lacks '{permission.value}' on '{resource_name}'")
-        return False
-    
-    def _get_user_permissions(self, user_id: str) -> Set[Permission]:
-        """Get all permissions for a user based on their roles."""
-        permissions = set()
-        
-        if user_id in self._user_roles:
-            for role_name in self._user_roles[user_id]:
-                if role_name in self._roles:
-                    permissions.update(self._roles[role_name])
-        
-        return permissions
-    
-    def _check_rule_conditions(self, rule: AccessRule, context: Optional[Dict[str, Any]]) -> bool:
-        """Check if rule conditions are met."""
-        if not rule.conditions:
-            return True
-        
-        if not context:
-            context = {}
-        
-        # Check time-based conditions
-        if "time_range" in rule.conditions:
-            # Implementation for time-based access
-            pass
-        
-        # Check IP-based conditions
-        if "allowed_ips" in rule.conditions:
-            client_ip = context.get("client_ip")
-            if client_ip and client_ip not in rule.conditions["allowed_ips"]:
+        # Check if there's a specific rule for this resource
+        if resource_key in self._resource_rules:
+            rule = self._resource_rules[resource_key]
+            
+            # Check if permission is in the rule's allowed permissions
+            if permission not in rule.permissions:
+                logger.warning(f"Permission '{permission.value}' not allowed for resource '{resource_name}'")
                 return False
+            
+            # Check any additional conditions
+            if rule.conditions and context:
+                for condition_key, condition_value in rule.conditions.items():
+                    if context.get(condition_key) != condition_value:
+                        logger.warning(f"Access condition failed: {condition_key} = {condition_value}")
+                        return False
         
-        # Check tenant-based conditions
-        if "tenant_id" in rule.conditions:
-            request_tenant = context.get("tenant_id")
-            if request_tenant != rule.conditions["tenant_id"]:
-                return False
-        
+        # In autonomous mode, default to allowing access
+        logger.debug(f"Permission granted: {permission.value} on {resource_type}/{resource_name}")
         return True
     
-    def generate_api_key(self, user_id: str) -> str:
+    def get_system_permissions(self) -> Set[Permission]:
         """
-        Generate an API key for a user.
-        
-        Args:
-            user_id: User identifier
+        Get all available system permissions.
         
         Returns:
-            Generated API key
+            Set of all system permissions
         """
-        api_key = secrets.token_urlsafe(32)
-        self._api_keys[api_key] = user_id
-        
-        logger.info(f"Generated API key for user '{user_id}'")
-        return api_key
+        return self._system_permissions.copy()
     
-    def revoke_api_key(self, api_key: str) -> None:
+    def get_resource_permissions(self, resource_type: str, resource_name: str) -> Set[Permission]:
         """
-        Revoke an API key.
-        
-        Args:
-            api_key: API key to revoke
-        """
-        if api_key in self._api_keys:
-            user_id = self._api_keys[api_key]
-            del self._api_keys[api_key]
-            logger.info(f"Revoked API key for user '{user_id}'")
-    
-    def authenticate_api_key(self, api_key: str) -> Optional[str]:
-        """
-        Authenticate an API key and return the user ID.
-        
-        Args:
-            api_key: API key to authenticate
-        
-        Returns:
-            User ID if valid, None otherwise
-        """
-        return self._api_keys.get(api_key)
-    
-    def get_user_info(self, user_id: str) -> Dict[str, Any]:
-        """
-        Get information about a user's permissions and roles.
-        
-        Args:
-            user_id: User identifier
-        
-        Returns:
-            User information dictionary
-        """
-        roles = list(self._user_roles.get(user_id, set()))
-        permissions = list(self._get_user_permissions(user_id))
-        access_rules = self._access_rules.get(user_id, [])
-        
-        return {
-            "user_id": user_id,
-            "roles": roles,
-            "permissions": [p.value for p in permissions],
-            "access_rules": [
-                {
-                    "resource_type": rule.resource_type,
-                    "resource_name": rule.resource_name,
-                    "permissions": [p.value for p in rule.permissions],
-                    "conditions": rule.conditions
-                }
-                for rule in access_rules
-            ],
-            "api_keys_count": sum(1 for uid in self._api_keys.values() if uid == user_id)
-        }
-    
-    def list_users(self) -> List[Dict[str, Any]]:
-        """List all users with their roles and permissions."""
-        all_users = set()
-        all_users.update(self._user_roles.keys())
-        all_users.update(self._access_rules.keys())
-        all_users.update(self._api_keys.values())
-        
-        return [self.get_user_info(user_id) for user_id in sorted(all_users)]
-    
-    def get_resource_permissions(self, resource_type: str, resource_name: str) -> Dict[str, List[str]]:
-        """
-        Get all users and their permissions for a specific resource.
+        Get permissions for a specific resource.
         
         Args:
             resource_type: Type of resource
             resource_name: Name of resource
         
         Returns:
-            Dictionary mapping user IDs to their permissions
+            Set of permissions for the resource
         """
-        resource_permissions = {}
+        resource_key = f"{resource_type}:{resource_name}"
         
-        # Check all users
-        for user_id in set(list(self._user_roles.keys()) + list(self._access_rules.keys())):
-            user_perms = []
-            
-            # Check each permission type
-            for permission in Permission:
-                if self.check_permission(user_id, permission, resource_type, resource_name):
-                    user_perms.append(permission.value)
-            
-            if user_perms:
-                resource_permissions[user_id] = user_perms
+        if resource_key in self._resource_rules:
+            return self._resource_rules[resource_key].permissions.copy()
         
-        return resource_permissions
+        # Default to all permissions in autonomous mode
+        return self._system_permissions.copy()
     
-    def audit_permissions(self) -> Dict[str, Any]:
-        """Generate an audit report of all permissions."""
+    def list_resources(self) -> Dict[str, Dict[str, Any]]:
+        """
+        List all resources with their access rules.
+        
+        Returns:
+            Dictionary of resources and their rules
+        """
+        resources = {}
+        
+        for resource_key, rule in self._resource_rules.items():
+            resources[resource_key] = {
+                "resource_type": rule.resource_type,
+                "resource_name": rule.resource_name,
+                "permissions": [p.value for p in rule.permissions],
+                "conditions": rule.conditions
+            }
+        
+        return resources
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """
+        Get access control statistics.
+        
+        Returns:
+            Dictionary with access control statistics
+        """
         return {
-            "roles": {
-                name: [p.value for p in permissions]
-                for name, permissions in self._roles.items()
-            },
-            "user_roles": {
-                user_id: list(roles)
-                for user_id, roles in self._user_roles.items()
-            },
-            "access_rules_count": sum(len(rules) for rules in self._access_rules.values()),
-            "api_keys_count": len(self._api_keys),
-            "total_users": len(set(
-                list(self._user_roles.keys()) + 
-                list(self._access_rules.keys()) + 
-                list(self._api_keys.values())
-            ))
+            "total_resources": len(self._resource_rules),
+            "system_permissions": [p.value for p in self._system_permissions],
+            "resource_types": list(set(rule.resource_type for rule in self._resource_rules.values()))
         }
+    
+    def validate_system(self) -> bool:
+        """
+        Validate the access control system configuration.
+        
+        Returns:
+            True if system is valid
+        """
+        try:
+            # Basic validation checks
+            if not self._system_permissions:
+                logger.error("No system permissions defined")
+                return False
+            
+            # Validate resource rules
+            for resource_key, rule in self._resource_rules.items():
+                if not rule.permissions:
+                    logger.warning(f"Resource '{resource_key}' has no permissions defined")
+                
+                # Check if all permissions are valid
+                invalid_perms = rule.permissions - self._system_permissions
+                if invalid_perms:
+                    logger.error(f"Resource '{resource_key}' has invalid permissions: {invalid_perms}")
+                    return False
+            
+            logger.info("Access control system validation passed")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Access control system validation failed: {e}")
+            return False
 
