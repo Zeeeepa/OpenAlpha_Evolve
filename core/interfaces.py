@@ -15,6 +15,11 @@ class Program:
     status: str = "unevaluated"
     created_at: float = field(default_factory=lambda: time.time())  # Track program age
     task_id: Optional[str] = None
+    # New fields for autonomous development
+    context_analysis: Optional[Dict[str, Any]] = None
+    debug_history: List[Dict[str, Any]] = field(default_factory=list)
+    learning_tags: List[str] = field(default_factory=list)
+    optimization_applied: List[str] = field(default_factory=list)
 
 @dataclass
 class TaskDefinition:
@@ -30,6 +35,11 @@ class TaskDefinition:
     allowed_imports: Optional[List[str]] = None
     tests: Optional[List[Dict[str, Any]]] = None # List of test groups. Each group is a dict, can include 'name', 'description', 'level' (for cascade), and 'test_cases'.
     expert_knowledge: Optional[str] = None # Relevant expert knowledge, equations, or snippets
+    # New fields for autonomous development
+    complexity_level: Optional[str] = None  # 'low', 'medium', 'high'
+    domain_tags: List[str] = field(default_factory=list)  # e.g., ['algorithms', 'data_structures']
+    success_criteria: Optional[Dict[str, Any]] = None
+    context_requirements: Optional[Dict[str, Any]] = None
 
 class BaseAgent(ABC):
     """Base class for all agents."""
@@ -114,4 +124,66 @@ class MonitoringAgentInterface(BaseAgent):
     async def report_status(self):
         pass
 
-                                                                      
+# New interfaces for autonomous development
+
+class ContextAnalysisInterface(BaseAgent):
+    @abstractmethod
+    async def analyze_codebase(self, target_path: Optional[str] = None) -> Dict[str, Any]:
+        pass
+    
+    @abstractmethod
+    def get_context_for_element(self, element_name: str) -> Optional[Dict[str, Any]]:
+        pass
+
+class ErrorAnalysisInterface(BaseAgent):
+    @abstractmethod
+    async def classify_error(self, error_info: Dict[str, Any]) -> Dict[str, Any]:
+        pass
+    
+    @abstractmethod
+    async def analyze_root_cause(self, error_classification: Dict[str, Any]) -> Dict[str, Any]:
+        pass
+
+class AutoDebuggingInterface(BaseAgent):
+    @abstractmethod
+    async def debug_program(self, program: Program, error_info: Dict[str, Any]) -> Dict[str, Any]:
+        pass
+    
+    @abstractmethod
+    async def suggest_fixes(self, error_classification: Dict[str, Any]) -> List[str]:
+        pass
+
+class LearningInterface(BaseAgent):
+    @abstractmethod
+    async def learn_from_data(self, learning_data: Dict[str, Any]) -> Dict[str, Any]:
+        pass
+    
+    @abstractmethod
+    def get_recommendations(self, context: Dict[str, Any]) -> List[str]:
+        pass
+    
+    @abstractmethod
+    def get_patterns(self, pattern_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        pass
+
+class PipelineOrchestratorInterface(BaseAgent):
+    @abstractmethod
+    async def run_pipeline(self, task_definition: TaskDefinition) -> Dict[str, Any]:
+        pass
+    
+    @abstractmethod
+    def add_stage_callback(self, stage: str, callback: Any):
+        pass
+    
+    @abstractmethod
+    def set_progress_callback(self, callback: Any):
+        pass
+
+class ValidationEngineInterface(BaseAgent):
+    @abstractmethod
+    async def validate_solution(self, program: Program, task_definition: TaskDefinition) -> Dict[str, Any]:
+        pass
+    
+    @abstractmethod
+    async def validate_pipeline_stage(self, stage_name: str, stage_data: Dict[str, Any]) -> bool:
+        pass
